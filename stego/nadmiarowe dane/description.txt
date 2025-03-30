@@ -1,0 +1,3 @@
+excavations.png - manually appended data to end of file
+image1.png - manually appended data to end of file
+zdjęcie.jpg - manually modified comment fields
