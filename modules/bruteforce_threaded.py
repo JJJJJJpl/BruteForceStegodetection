@@ -3,22 +3,31 @@ from PIL import Image
 import numpy as np
 from collections import Counter
 import string
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
-def run(filename,treshold):
+def run(filename, treshold, max_workers=4):
     image = Image.open(filename)
     image = image.convert("RGB")
-    for a in BlockIter1(image):
-       for b in OrderIter2(a):
-          for c in ColorIter3(b):
-            for d in BitsIter4(c):
-               for e in DecodingIter5(d):
-                  if e != None:
-                    score1 = character_distribution_score(e)
-                    score2 = doubles_score(e)
-
-                    if score1 > treshold and score2 > treshold:
-                        print("Potential text detected:",e,"scores:",score1,score2)
-    print("bruteforce finished")
+    lock = threading.Lock()
+    
+    def process_e(e):
+        if e is not None:
+            score1 = character_distribution_score(e)
+            score2 = doubles_score(e)
+            if score1 > treshold and score2 > treshold:
+                with lock:
+                    print("Potential text detected:", e, "scores:", score1, score2)
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for a in BlockIter1(image):
+            for b in OrderIter2(a):
+                for c in ColorIter3(b):
+                    for d in BitsIter4(c):
+                        for e in DecodingIter5(d):
+                            executor.submit(process_e, e)
+    
+    print("Bruteforce finished")
 
 class BlockIter1:
   def __init__(self,image):
@@ -196,5 +205,6 @@ def doubles_score(text):
 
 
 if __name__ == "__main__":
-    run("../normal/6zxkS9PVE-unsplash.png",0.5)
+    #run("../normal/YaK5lgBy0sunsplash.png",0.1)
+    run("../stego/LSB w BMP/zdj1sh.png",0.1)
     pass
