@@ -14,26 +14,27 @@ def run(filename, window_size, treshold, max_workers=4):
     lock = threading.Lock()
     
     with open("output.txt", 'w') as output_file:
-      def process_e(e):
-         if len(e) > 0:
-            f = check(e, window_size, treshold, entropy_score)
-            if len(f) > 0:
-               g = check(e, window_size, treshold, character_distribution_score)
-               if len(g) > 0:
-                  h = check(e, window_size, treshold, doubles_score)
-                  if len(h) > 0:
-                     with lock:
-                        output_file.write(h)
-                        output_file.write("\n\n")
-                        #print("Potential text detected:", h)
+      def process_d(d):
+         for e in DecodingIter5(d):
+            if len(e) > 0:
+               e = readable_substrings(e,window_size)
+               f = check(e, window_size, treshold, entropy_score)
+               if len(f) > 0:
+                  g = check(e, window_size, treshold, character_distribution_score)
+                  if len(g) > 0:
+                     h = check(e, window_size, treshold, doubles_score)
+                     if len(h) > 0:
+                        with lock:
+                           output_file.write(h)
+                           output_file.write("\n\n")
+                           #print("Potential text detected:", h)
       
       with ThreadPoolExecutor(max_workers=max_workers) as executor:
          for a in BlockIter1(image):
                for b in OrderIter2(a):
                   for c in ColorIter3(b):
                      for d in BitsIter4(c):
-                           for e in DecodingIter5(d):
-                              executor.submit(process_e, e)
+                        executor.submit(process_d, d)
       
     print("Bruteforce finished")
 
@@ -181,6 +182,21 @@ class DecodingIter5:
             return byte_data.decode('ascii', errors='ignore')
       else:
          raise StopIteration
+
+def readable_substrings(text,window_size):
+   all = [""]
+   for c in text:
+      if c.isprintable():
+         all[len(all)-1] += c
+      else:
+         if all[len(all)-1] != "":
+            all.append("")
+   res = ""
+   for i in all:
+        if len(i) > window_size -2:
+            res += i + "?"
+   return res
+
 
 
 def check(text,window_size,treshold,function):
