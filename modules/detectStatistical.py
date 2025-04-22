@@ -387,16 +387,17 @@ class JpegAnalyzer:
         self.recompress_image(quality=75)
         dct_anomalys = self.analyze_DCT(dct_blocks)
         artifacts_anomalys = self.analyze_artifacts(dct_blocks)
+        
         anomaly = self.is_stego_suspected_dct(dct_anomalys, artifacts_anomalys)
         print(dct_anomalys,artifacts_anomalys)
         print(anomaly)
-        return anomaly
+        return 
 
     def is_stego_suspected_dct(self, dct_anomalys, artifacts_anomalys):
         histogram_anomaly, benford_anomaly = artifacts_anomalys
         chanels = ['Y', 'Cb', 'Cr']
         for channel in chanels:
-            if histogram_anomaly[channel] and benford_anomaly[channel] or dct_anomalys and histogram_anomaly[channel] or dct_anomalys and benford_anomaly[channel]:
+            if histogram_anomaly[channel] and benford_anomaly[channel] or dct_anomalys[channel] and histogram_anomaly[channel] or dct_anomalys[channel] and benford_anomaly[channel]:
                 print(f"Podejrzany kanał: {channel}")
                 return True
         return False
@@ -480,6 +481,7 @@ class JpegAnalyzer:
         def analyze_dct_differences(dct_blocks, folder_path="grouped_by_resolution\\res_1_250"):
             suspicion_score = 0
             report = {}
+            sus = {}
             stats = json.load(open(f"{folder_path}\\stats.json", 'r'))
 
             difference = comapare_params(dct_blocks, recompressed_dct)
@@ -504,16 +506,12 @@ class JpegAnalyzer:
                 print(stats[channel]['DCT_MeanAbsDiff_Mean'] + 2 * stats[channel]['DCT_MeanAbsDiff_Std'])
                 print (report[channel])
                 print("=====================")
-                if abs_mean > stats[channel]['DCT_MeanAbsDiff_Mean'] + 2 * stats[channel]['DCT_MeanAbsDiff_Std']:
-                    suspicion_score += 1
+                sus[channel] = abs_mean > stats[channel]['DCT_MeanAbsDiff_Mean'] + 2 * stats[channel]['DCT_MeanAbsDiff_Std']
 
             for ch, stats in report.items():
                 print(f"{ch} -> MeanAbsDiff: {stats['MeanAbsDiff']:.2f}, StdDev: {stats['StdDev']:.2f}, MaxAbsDiff: {stats['MaxAbsDiff']:.2f}")
             
-            if suspicion_score >= 2:
-                return True
-            else:
-                return False
+            return sus
 
         is_diffrance_anomaly = analyze_dct_differences(dct_blocks,folder_path)
         return is_diffrance_anomaly
@@ -533,6 +531,12 @@ class JpegAnalyzer:
             # Obliczamy różnicę histogramów (np. L1 normę)
             diff = np.abs(hist_orig - hist_rec)
             anomaly_score = np.sum(diff)
+            #epsilon = 1e-10
+            #kl_div = np.sum(hist_orig * np.log((hist_orig + epsilon) / (hist_rec + epsilon)))
+            #anomaly_score = kl_div
+            #weights = np.exp(-np.abs(np.linspace(-100, 100, 201)))  # większa waga przy 0
+            #diff = weights * np.abs(hist_orig - hist_rec)
+            #anomaly_score = np.sum(diff)
 
             return bool(anomaly_score > 0.2)  # Próg do wykrywania anomalii
 
@@ -602,10 +606,10 @@ class JpegAnalyzer:
         
         return is_benford_anomaly,is_histogram_anomaly
 
-analyze_image("stego\\LSB w JPG\\AAAAA.jpg")
+#analyze_image("stego\\LSB w JPG\\AAAAA.jpg")
 #analyze_image("normal\\pi9UmWpTId0-unsplash.jpg")
 
 #analyze_image("modules\\Cat_November_2010-1.jpg")
-#analyze_image("stego\\LSB w JPG\\cat.jpg")
+analyze_image("stego\\LSB w JPG\\cat.jpg")
 #Image = PngAnalyzer("BruteForceStegodetection\\modules\\zakodowanylsb.png")
 #Image.process_image_directory("BruteForceStegodetection\\normal")
