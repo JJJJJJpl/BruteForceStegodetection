@@ -281,5 +281,5 @@ def doubles_score(text):
 if __name__ == "__main__":
     #run("../normal/YaK5lgBy0sunsplash.png",50,0.2)
     #run("../stego/LSB w BMP/YaK5Long.png",20,0.2)
-    run('../stego/LSB w BMP/hidden1.bmp',20,0.4)
+    run('../stego/LSB w BMP/test.png',20,0.3)
     pass
