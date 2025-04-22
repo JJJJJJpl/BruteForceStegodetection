@@ -313,34 +313,114 @@ class PngAnalyzer:
 
 class JpegAnalyzer:
     def __init__(self, image_path):
-        self.recompressed_path = "BruteForceStegodetection\\modules\\recompressed.jpg"
+        self.recompressed_path = "modules\\recompressed.jpg"
         self.image_path = image_path
+
+
+    def save_jpeg_params(self):
+        folders = ["grouped_by_resolution\\res_1_250",
+                   "grouped_by_resolution\\res_251_500",
+                   "grouped_by_resolution\\res_501_750",
+                   "grouped_by_resolution\\res_751_1000",
+                   "grouped_by_resolution\\res_1001_1250"]
+        for folder in folders:
+            stats = self.analyze_folder(folder)
+            print(f"Folder: {folder}")
+            print(stats)
+            with open(f"{folder}\\stats.json", 'w') as f:
+                json.dump(stats, f, indent=4)
+            
+    def analyze_folder(self,folder_path):
+        # Struktura danych do agregacji wyników
+        dct_means = {'Y': [], 'Cb': [], 'Cr': []}
+        artifact_scores = {'Y': [], 'Cb': [], 'Cr': []}
+
+        # Iteruj przez pliki w folderze
+        for filename in os.listdir(folder_path):
+            if filename.lower().endswith((".jpg", ".jpeg", ".png")):
+                image_path = os.path.join(folder_path, filename)
+                try:
+                    dct_blocks = self.extract_dct_coeffs(image_path)
+                    if dct_blocks is None:
+                        print(f"{filename}: extract_dct_coeffs zwróciło None")
+                        continue
+                    self.recompress_image(quality=75,image_path=image_path)
+
+                    dct_anomalys = self.analyze_DCT(dct_blocks)
+                    if dct_anomalys is None:
+                        print(f"{filename}: analyze_DCT zwróciło None")
+                        continue
+                    artifacts_anomalys = self.analyze_artifacts(dct_blocks)
+                    if artifacts_anomalys is None:
+                        print(f"{filename}: analyze_artifacts zwróciło None")
+                        continue
+                    # Sumowanie DCT i artefaktów dla każdego kanału
+                    for channel in ['Y', 'Cb', 'Cr']:
+                        dct_means[channel].append(dct_anomalys[channel]['MeanAbsDiff'])
+                        artifact_scores[channel].append(artifacts_anomalys[channel])
+
+                except Exception as e:
+                    print(f"Błąd przy pliku {filename}: {e}")
+                    continue
+
+        # Obliczanie średnich i błędu standardowego
+        stats = {}
+        for channel in ['Y', 'Cb', 'Cr']:
+            dct_mean = np.mean(dct_means[channel])
+            dct_std = np.std(dct_means[channel])
+            artifact_mean = np.mean(artifact_scores[channel])
+            artifact_std = np.std(artifact_scores[channel])
+
+            stats[channel] = {
+                'DCT_MeanAbsDiff_Mean': dct_mean,
+                'DCT_MeanAbsDiff_Std': dct_std,
+                'Artifacts_Mean': artifact_mean,
+                'Artifacts_Std': artifact_std
+            }
+
+        return stats
+      
 
     def read_jpeg_params(self):
         image_path = self.image_path
-        dct_blocks = self.extract_dct_coeffs(image_path)
+        dct_blocks,folder_path = self.extract_dct_coeffs(image_path)
         self.recompress_image(quality=75)
         dct_anomalys = self.analyze_DCT(dct_blocks)
         artifacts_anomalys = self.analyze_artifacts(dct_blocks)
         anomaly = self.is_stego_suspected_dct(dct_anomalys, artifacts_anomalys)
+        print(dct_anomalys,artifacts_anomalys)
         print(anomaly)
         return anomaly
 
     def is_stego_suspected_dct(self, dct_anomalys, artifacts_anomalys):
         histogram_anomaly, benford_anomaly = artifacts_anomalys
-        print(histogram_anomaly, benford_anomaly, dct_anomalys)
         chanels = ['Y', 'Cb', 'Cr']
         for channel in chanels:
             if histogram_anomaly[channel] and benford_anomaly[channel] or dct_anomalys and histogram_anomaly[channel] or dct_anomalys and benford_anomaly[channel]:
                 print(f"Podejrzany kanał: {channel}")
                 return True
-
+        return False
 
     def extract_dct_coeffs(self,image_path):
         img = cv2.imread(image_path)
         if img is None:
             raise FileNotFoundError(f"Nie można otworzyć pliku: {image_path}. Sprawdź ścieżkę.")
         ycbcr = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb) 
+        height, width = img.shape[:2]
+        max_dim = max(width, height)
+        match max_dim:
+            case h if h < 250 and h > 0:
+                folder_path = "grouped_by_resolution\\res_1_250"
+            case h if h < 500 and h > 250:
+                folder_path = "grouped_by_resolution\\res_251_500"
+            case h if h < 750 and h > 500:
+                folder_path = "grouped_by_resolution\\res_501_750"
+            case h if h < 1000 and h > 750:
+                folder_path = "grouped_by_resolution\\res_751_1000"
+            case h if h > 1000:
+                folder_path = "grouped_by_resolution\\res_1001_1250"
+            case _:
+                raise ValueError("Nieprawidłowy rozmiar obrazu. Rozmiar musi być większy od 0.")
 
         Y, Cr, Cb = cv2.split(ycbcr)
 
@@ -368,10 +448,11 @@ class JpegAnalyzer:
             "Y": compute_dct(Y),
             "Cb": compute_dct(Cb),
             "Cr": compute_dct(Cr)
-        }
+        },folder_path
 
-    def recompress_image(self, quality=75):
-        image_path = self.image_path
+    def recompress_image(self, quality=75, image_path=None):
+        if image_path is None:
+            image_path = self.image_path
         img = cv2.imread(image_path)
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
         _, encoded_img = cv2.imencode('.jpg', img, encode_param)
@@ -383,7 +464,7 @@ class JpegAnalyzer:
 
 
     def analyze_DCT(self, dct_blocks):
-        recompressed_dct = self.extract_dct_coeffs(self.recompressed_path)
+        recompressed_dct,folder_path = self.extract_dct_coeffs(self.recompressed_path)
         def comapare_params(dct_blocks, recompressed_dct):
             original_dct = dct_blocks
             if recompressed_dct is None:
@@ -396,17 +477,18 @@ class JpegAnalyzer:
             }
             return difference
 
-        def analyze_dct_differences(dct_blocks, threshold=2.0):
+        def analyze_dct_differences(dct_blocks, folder_path="grouped_by_resolution\\res_1_250"):
             suspicion_score = 0
             report = {}
+            stats = json.load(open(f"{folder_path}\\stats.json", 'r'))
 
             difference = comapare_params(dct_blocks, recompressed_dct)
 
             for channel in ["Y", "Cb", "Cr"]:
                 diff = difference[channel]
-                abs_mean = np.mean(np.abs(diff))
-                std_dev = np.std(diff)
-                max_diff = np.max(np.abs(diff))
+                abs_mean = float(np.mean(np.abs(diff)))
+                std_dev = float(np.std(diff))
+                max_diff = float(np.max(np.abs(diff)))
 
                 report[channel] = {
                     "MeanAbsDiff": abs_mean,
@@ -414,8 +496,15 @@ class JpegAnalyzer:
                     "MaxAbsDiff": max_diff
                 }
 
+            
+            
+
                 # Prosta reguła: jeśli średnia różnica przekracza próg, podnieś alert
-                if abs_mean > threshold:
+                print("=====================")
+                print(stats[channel]['DCT_MeanAbsDiff_Mean'] + 2 * stats[channel]['DCT_MeanAbsDiff_Std'])
+                print (report[channel])
+                print("=====================")
+                if abs_mean > stats[channel]['DCT_MeanAbsDiff_Mean'] + 2 * stats[channel]['DCT_MeanAbsDiff_Std']:
                     suspicion_score += 1
 
             for ch, stats in report.items():
@@ -426,7 +515,7 @@ class JpegAnalyzer:
             else:
                 return False
 
-        is_diffrance_anomaly = analyze_dct_differences(dct_blocks)
+        is_diffrance_anomaly = analyze_dct_differences(dct_blocks,folder_path)
         return is_diffrance_anomaly
     
     def analyze_artifacts(self, dct_blocks):
@@ -434,6 +523,7 @@ class JpegAnalyzer:
         def analyze_dct_histogram_anomalies(dct_original, dct_recompressed, channel='Y'):
             # Wybieramy kanał
             orig = dct_original[channel].flatten()
+            
             rec = dct_recompressed[channel].flatten()
 
             # Histogramy wartości DCT (w zakresie -100 do 100 dla lepszej czułości)
@@ -446,57 +536,76 @@ class JpegAnalyzer:
 
             return bool(anomaly_score > 0.2)  # Próg do wykrywania anomalii
 
-        def analyze_benford_law(dct_data, channel='Y'):
+        def analyze_benford_law(dct_blocks, channel='Y', folder_path="grouped_by_resolution\\res_1_250"):
 
-            dct_flat = np.abs(dct_data[channel].flatten())
-            dct_flat = dct_flat[dct_flat > 0]  # pomiń zera
+            blocks = dct_blocks[channel]
+            
+            # Jeżeli blocks to np. (num_blocks, 8, 8) albo (H, W, 8, 8)
+            if blocks.ndim == 4:
+                all_blocks = blocks.reshape(-1, 8, 8)
+            elif blocks.ndim == 3 and blocks.shape[1:] == (8, 8):
+                all_blocks = blocks
+            else:
+                raise ValueError(f"Nieoczekiwany kształt tablicy bloków: {blocks.shape}")
+
+            coefficients = []
+            for block in all_blocks:
+                ac_coeffs = np.delete(block.flatten(), 0)  # pomiń DC coefficient
+                coefficients.extend(ac_coeffs)
+
+            coeffs_abs = np.abs(coefficients)
+            coeffs_abs = coeffs_abs[coeffs_abs > 0]
+
+            if len(coeffs_abs) == 0:
+                print(f"[{channel}] Zbyt mało danych do analizy.")
+                return False
 
             # Ekstrakcja pierwszych cyfr
-            first_digits = [int(str(int(x))[0]) for x in dct_flat if x >= 1]
+            first_digits = [int(str(int(val))[0]) for val in coeffs_abs if val >= 1]
 
-            # Liczenie rozkładu cyfr 1-9
             digit_counts = np.zeros(9)
             for digit in first_digits:
                 if 1 <= digit <= 9:
                     digit_counts[digit - 1] += 1
 
-            # Normalizacja
             digit_distribution = digit_counts / np.sum(digit_counts)
-
-
-            # Rozkład teoretyczny Benforda
             benford_dist = np.array([np.log10(1 + 1/d) for d in range(1, 10)])
-
-            # Porównanie rozkładów (L1 distance)
-            differencee = np.abs(digit_distribution - benford_dist)
+            difference = np.abs(digit_distribution - benford_dist)
+            benford_score = float(np.sum(difference) / 9)  # normalizacja
+            num_coeffs = len(first_digits)
+            stats = json.load(open(f"{folder_path}\\stats.json", 'r'))
+            thresholds = {
+                'Y': stats['Y']['Artifacts_Mean'] + 2 * stats['Y']['Artifacts_Std'],
+                'Cb': stats['Cb']['Artifacts_Mean'] + 2 * stats['Cb']['Artifacts_Std'],
+                'Cr': stats['Cr']['Artifacts_Mean'] + 2 * stats['Cr']['Artifacts_Std']
+            }
             
 
-            mean_diff = np.mean(differencee)
-            std_diff = np.std(differencee)
-            
-            # Dostosowanie progu na podstawie odchylenia standardowego
-            threshold = mean_diff + 2 * std_diff  # np. ustawienie progu na 2 razy odchylenie standardowe
-            
-            # Porównanie z obliczonym progiem
-            benford_score = np.sum(differencee)
 
-            #benford_score = np.sum(differencee)
-            print(f"Benford score for {channel}: {benford_score:.4f}: {threshold:.4f}")
-            # Jeśli różnica jest większa niż próg, uznajemy to za anomalię
-            return bool(benford_score > 0.12)
+            print(f"Benford score for {channel}: {benford_score:.4f}")
+            print(f"Rozkład: {digit_distribution.round(3)}")
+            print(f"Benford: {benford_dist.round(3)}")
+            print(f"Różnica: {difference.round(3)}")
+            print(f"Liczba współczynników: {num_coeffs}")
+            print(f"Próg: {thresholds[channel]:.4f}")
+            return benford_score > thresholds[channel]  # Próg do wykrywania anomalii
+
 
         is_histogram_anomaly = {}
         is_benford_anomaly = {}
 
-        dct_decompressed = self.extract_dct_coeffs(self.recompressed_path)
+        dct_decompressed,folder_path = self.extract_dct_coeffs(self.recompressed_path)
         chanels = ['Y', 'Cb', 'Cr']
         for channel in chanels:
             is_histogram_anomaly[channel] = analyze_dct_histogram_anomalies(dct_blocks, dct_decompressed, channel=channel)
-            is_benford_anomaly[channel] = analyze_benford_law(dct_blocks, channel=channel)
+            is_benford_anomaly[channel] = analyze_benford_law(dct_blocks, channel=channel,folder_path=folder_path)
         
-        return is_histogram_anomaly, is_benford_anomaly
+        return is_benford_anomaly,is_histogram_anomaly
 
-analyze_image("BruteForceStegodetection\\normal\\sumup-2enEyX2MAvQ-unsplash.jpg")
-#analyze_image("BruteForceStegodetection\\stego\\LSB w JPG\\cat.jpg")
+analyze_image("stego\\LSB w JPG\\AAAAA.jpg")
+#analyze_image("normal\\pi9UmWpTId0-unsplash.jpg")
+
+#analyze_image("modules\\Cat_November_2010-1.jpg")
+#analyze_image("stego\\LSB w JPG\\cat.jpg")
 #Image = PngAnalyzer("BruteForceStegodetection\\modules\\zakodowanylsb.png")
 #Image.process_image_directory("BruteForceStegodetection\\normal")

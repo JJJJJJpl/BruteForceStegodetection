@@ -1,0 +1,20 @@
+{
+    "Y": {
+        "DCT_MeanAbsDiff_Mean": 1.5895443104081235,
+        "DCT_MeanAbsDiff_Std": 1.1729003799319229,
+        "Artifacts_Mean": 0.018455231702923014,
+        "Artifacts_Std": 0.011555602885610807
+    },
+    "Cb": {
+        "DCT_MeanAbsDiff_Mean": 0.813898881613198,
+        "DCT_MeanAbsDiff_Std": 0.4913219123517843,
+        "Artifacts_Mean": 0.05114161488773131,
+        "Artifacts_Std": 0.00786780802955524
+    },
+    "Cr": {
+        "DCT_MeanAbsDiff_Mean": 0.8817748629440696,
+        "DCT_MeanAbsDiff_Std": 0.5902168273403814,
+        "Artifacts_Mean": 0.0483992770328647,
+        "Artifacts_Std": 0.007615962649555952
+    }
+}
