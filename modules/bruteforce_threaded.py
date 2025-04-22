@@ -12,6 +12,8 @@ def run(filename, window_size, treshold, max_workers=4):
     if image.mode != 'RGBA':
       image = image.convert("RGB")
     lock = threading.Lock()
+
+    prn = printer()
     
     with open("output.txt", 'w') as output_file:
       def process_d(d):
@@ -22,7 +24,7 @@ def run(filename, window_size, treshold, max_workers=4):
                if len(f) > 0:
                   g = check(e, window_size, treshold, character_distribution_score)
                   if len(g) > 0:
-                     h = check(e, window_size, treshold, doubles_score)
+                     h = check(e, window_size, treshold/2, doubles_score)
                      if len(h) > 0:
                         with lock:
                            output_file.write(h)
@@ -30,11 +32,12 @@ def run(filename, window_size, treshold, max_workers=4):
                            #print("Potential text detected:", h)
       
       with ThreadPoolExecutor(max_workers=max_workers) as executor:
-         for a in BlockIter1(image):
-               for b in OrderIter2(a):
-                  for c in ColorIter3(b):
-                     for d in BitsIter4(c):
-                        executor.submit(process_d, d)
+         #for a in BlockIter1(image):
+         for b in OrderIter2(np.array(image)):
+            for c in ColorIter3(b):
+               for d in BitsIter4(c):
+                  prn.call("iteration: ","/311")
+                  executor.submit(process_d, d)
       
     print("Bruteforce finished")
 
@@ -147,6 +150,22 @@ class BitsIter4:
          case 5:
             return np.column_stack([self.arr & 1, (self.arr >> 1) & 1 ]).flatten()
          case 6:
+            return np.concatenate([self.arr & 1 , (self.arr >> 1) & 1, (self.arr >> 2) & 1])
+         case 7:
+            return np.concatenate([(self.arr >> 2) & 1 , (self.arr >> 1) & 1, self.arr & 1])
+         case 8:
+            return np.column_stack([self.arr & 1, (self.arr >> 1) & 1, (self.arr >> 2) & 1 ]).flatten()
+         case 9:
+            return np.column_stack([(self.arr >> 2) & 1 , (self.arr >> 1) & 1, self.arr & 1]).flatten()
+         case 10:
+            return np.concatenate([self.arr & 1 , (self.arr >> 1) & 1, (self.arr >> 2) & 1, (self.arr >> 3) & 1])
+         case 11:
+            return np.concatenate([(self.arr >> 3) & 1, (self.arr >> 2) & 1 , (self.arr >> 1) & 1, self.arr & 1])
+         case 12:
+            return np.column_stack([self.arr & 1, (self.arr >> 1) & 1, (self.arr >> 2) & 1, (self.arr >> 3) & 1 ]).flatten()
+         case 13:
+            return np.column_stack([(self.arr >> 3) & 1, (self.arr >> 2) & 1 , (self.arr >> 1) & 1, self.arr & 1]).flatten()
+         case 14:
             raise StopIteration
 
 class DecodingIter5:
@@ -183,17 +202,28 @@ class DecodingIter5:
       else:
          raise StopIteration
 
+class printer():
+   called = 0
+   
+   def call(self,first,second):
+      print(first + str(self.called) + second)
+      self.called += 1
+
 def readable_substrings(text,window_size):
    all = [""]
    for c in text:
       if c.isprintable():
          all[len(all)-1] += c
+      elif c == '\n':
+         all[len(all)-1] += '/n'
+      elif c == '\t':
+         all[len(all)-1] += '/t'
       else:
          if all[len(all)-1] != "":
             all.append("")
    res = ""
    for i in all:
-        if len(i) > window_size -2:
+        if len(i) > window_size:
             res += i + "?"
    return res
 
@@ -250,5 +280,6 @@ def doubles_score(text):
 
 if __name__ == "__main__":
     #run("../normal/YaK5lgBy0sunsplash.png",50,0.2)
-    run("../stego/LSB w BMP/YaK5Long.png",20,0.2)
+    #run("../stego/LSB w BMP/YaK5Long.png",20,0.2)
+    run('../stego/LSB w BMP/hidden1.bmp',20,0.4)
     pass
