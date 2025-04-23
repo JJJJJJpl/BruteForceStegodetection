@@ -35,11 +35,11 @@ class PngAnalyzer:
         #self.display_histogram(histogram)
         #print(blocks)
         #self.calculate_gefr()
-        #self.is_stego_suspected_gefr()
+        print(self.is_stego_suspected_gefr())
         #self.gref_analysis()
         #print(self.is_stego_suspected_rs())
         #self.pov_analysis()
-        print(self.is_stego_suspected_pov())
+        #print(self.is_stego_suspected_pov())
         
     
     def get_image_properties(self):
@@ -94,23 +94,37 @@ class PngAnalyzer:
         # Oblicz średnie i odchylenia standardowe dla każdej metryki
         metrics_gefr = ['mean_gefr', 'std_gefr', 'skewness_gefr', 'kurtosis_gefr']
         summary = {}
+
+        # Dodaj metryki GEFR
         for metric in metrics_gefr:
             values = [g[metric] for g in gefr_list]
             summary[metric] = {
                 "mean": float(np.mean(values)),
                 "std": float(np.std(values))
             }
+
+        # Dodaj metryki POV (bez nadpisywania summary!)
         metrics_pov = ['Blue_PDS', 'Green_PDS', 'Red_PDS', 'Grayscale_PDS']
+
         for metric in metrics_pov:
-            values = [p[metric]["PoV Difference Sum"] for p in pov_list]
-            summary[metric] = {
-                "mean": float(np.mean(values)),
-                "std": float(np.std(values))
-            }
+            values = []
+
+            for p in pov_list:
+                if metric in p and "PoV Difference Sum" in p[metric]:
+                    values.append(p[metric]["PoV Difference Sum"])
+
+            if values:
+                summary[metric] = {
+                    "mean": float(np.mean(values)),
+                    "std": float(np.std(values))
+                }
+            else:
+                print(f"Brak danych dla metryki: {metric}")
+
         print(summary)
 
-
-        with open("BruteForceStegodetection\\modules\\summary.json", 'w') as f:
+        path = os.path.join(directory_path, "summary.json")
+        with open(f"{path}", 'w') as f:
             json.dump(summary, f, indent=4)
         return summary
   
@@ -145,7 +159,19 @@ class PngAnalyzer:
 
         def dct_analysis(img):
             # Przeprowadzanie analizy DCT na obrazie
-            img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            if len(img.shape) == 3:
+                if img.shape[2] == 3:
+                    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                elif img.shape[2] == 1:
+                    img_gray = img[:, :, 0]
+                else:
+                    print(f"Niezwykły format obrazu: shape={img.shape}")
+                    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # domyślnie próbuj przekonwertować
+            else:
+                img_gray = img  # Jeśli obraz jest już grayscale
+
+
+            #img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             h, w = img_gray.shape
             dct_blocks = []
 
@@ -167,11 +193,11 @@ class PngAnalyzer:
     
     def is_stego_suspected_gefr(self, threshold=2):
         while True:
-            if not os.path.exists("BruteForceStegodetection\\modules\\summary.json"):
+            if not os.path.exists("modules\\summary.json"):
                 print("brak summary, generuje summary")
-                self.process_image_directory("BruteForceStegodetection\\normal")
+                self.process_image_directory("normal")
             else:
-                with open ("BruteForceStegodetection\\modules\\summary.json", 'r') as summar:
+                with open ("modules\\summary.json", 'r') as summar:
                     reference_stats = json.load(summar)
                 break
         gefr = self.gref_analysis()
@@ -290,11 +316,11 @@ class PngAnalyzer:
   
     def is_stego_suspected_pov(self, threshold=2):
         while True:
-            if not os.path.exists("BruteForceStegodetection\\modules\\summary.json"):
+            if not os.path.exists("modules\\summary.json"):
                 print("brak summary, generuje summary")
-                self.process_image_directory("BruteForceStegodetection\\normal")
+                self.process_image_directory("normal")
             else:
-                with open ("BruteForceStegodetection\\modules\\summary.json", 'r') as summar:
+                with open ("modules\\summary.json", 'r') as summar:
                     reference_stats = json.load(summar)
                 break
         
@@ -610,6 +636,12 @@ class JpegAnalyzer:
 #analyze_image("normal\\pi9UmWpTId0-unsplash.jpg")
 
 #analyze_image("modules\\Cat_November_2010-1.jpg")
-analyze_image("stego\\LSB w JPG\\cat.jpg")
-#Image = PngAnalyzer("BruteForceStegodetection\\modules\\zakodowanylsb.png")
-#Image.process_image_directory("BruteForceStegodetection\\normal")
+#analyze_image("stego\\LSB w JPG\\cat.jpg")
+#analyze_image("modules\\testjpg.jpg")
+#analyze_image("stego\\LSB w BMP\\YaK5Short.png")
+Image = PngAnalyzer("modules\\zakodowanylsb.png")
+folder_path1 = "grouped_by_resolution"
+
+for foldername in os.listdir(folder_path1):
+    folder_path2 = os.path.join(folder_path1, foldername)
+    Image.process_image_directory(f"{folder_path2}")
