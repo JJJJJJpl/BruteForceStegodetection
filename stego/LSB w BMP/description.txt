@@ -1,3 +1,8 @@
 YaK5Long - LSB-Steganography small file big text
 YaK5Short - LSB-Steganography small file short text
 zdj1sh - LSB-Steganography small file short text
+hidden1.bmp - Steganography long text bmp 2 bits
+hidden2.png - Steganography long text png 3 bits
+hidden3.png - Steganography big file very long text png 1 bits
+test - LSB SourceForge big file long text on 7 bits
+test_enc - LSB SourceForge big file long text protected with password 'duck' on 8 bits
