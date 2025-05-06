@@ -6,3 +6,4 @@ hidden2.png - Steganography long text png 3 bits
 hidden3.png - Steganography big file very long text png 1 bits
 test - LSB SourceForge big file long text on 7 bits
 test_enc - LSB SourceForge big file long text protected with password 'duck' on 8 bits
+IMG_enc - LSB-Steganography very long base 64 encoded text

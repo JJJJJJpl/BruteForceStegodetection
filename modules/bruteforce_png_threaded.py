@@ -6,6 +6,7 @@ from collections import Counter
 import string
 from concurrent.futures import ThreadPoolExecutor
 import threading
+import base64
 
 def run(filename, window_size, treshold, max_workers=4):
     image = Image.open(filename)
@@ -36,7 +37,7 @@ def run(filename, window_size, treshold, max_workers=4):
          for b in OrderIter2(np.array(image)):
             for c in ColorIter3(b):
                for d in BitsIter4(c):
-                  prn.call("iteration: ","/311")
+                  prn.call("iteration: ")
                   executor.submit(process_d, d)
       
     print("Bruteforce finished")
@@ -205,8 +206,8 @@ class DecodingIter5:
 class printer():
    called = 0
    
-   def call(self,first,second):
-      print(first + str(self.called) + second)
+   def call(self,first):
+      print(first + str(self.called))
       self.called += 1
 
 def readable_substrings(text,window_size):
@@ -226,8 +227,6 @@ def readable_substrings(text,window_size):
         if len(i) > window_size:
             res += i + "?"
    return res
-
-
 
 def check(text,window_size,treshold,function):
    if len(text) < window_size:
@@ -264,7 +263,7 @@ def doubles_score(text):
                     "ll" ,"at" , "tt" ,"hi" , "el" ,"as" , "ro" ,"it" , "ad" ,"ng" , "di" ,
                     "is" , "ew" ,"or" , "ra" ,"et" , "ri" ,"of" , "sh" ,"ti", "am", "i ",
                     " i", " t", "t " "e ", " e", " a", "m ", " o", "f ", " w", " s", "we", 
-                    "s ", "do", "if", "my", "\'s", "by", "ho", ", ", ". ", "? ", "! ", ".."]
+                    "s ", "do", "if", "my", "\'s", "by", "ho", ", ", ". "]
     text = text.lower()
     
     all_pairs = 0
@@ -275,11 +274,12 @@ def doubles_score(text):
           valid_pairs += 1
 
     return valid_pairs/ all_pairs if valid_pairs > 0 and all_pairs > 0 else 0.0
-
-
-
+   
 if __name__ == "__main__":
     #run("../normal/YaK5lgBy0sunsplash.png",50,0.2)
-    #run("../stego/LSB w BMP/YaK5Long.png",20,0.2)
-    run('../stego/LSB w BMP/test.png',20,0.3)
+    #run("../stego/LSB w BMP/YaK5Long.png",20,0.4)
+    #run('../stego/LSB w BMP/test.png',20,0.3) #not possible
+    #run('../stego/LSB w JPG/plik.png',20,0.2) #not possible
+    #run('../stego/LSB w JPG/cat.jpg',20,0.3)
+    run("../stego/LSB w BMP/IMG_enc.png",20,0.2)
     pass
