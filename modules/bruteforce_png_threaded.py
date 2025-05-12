@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 import base64
 
-def run(filename, window_size, treshold, max_workers=4):
+def run(filename, window_size, treshold, max_workers=4,silent=False,print_all=False):
     image = Image.open(filename)
     if image.mode != 'RGBA':
       image = image.convert("RGB")
@@ -20,27 +20,37 @@ def run(filename, window_size, treshold, max_workers=4):
       def process_d(d):
          for e in DecodingIter5(d):
             if len(e) > 0:
-               e = readable_substrings(e,window_size)
-               f = check(e, window_size, treshold, entropy_score)
-               if len(f) > 0:
-                  g = check(e, window_size, treshold, character_distribution_score)
-                  if len(g) > 0:
-                     h = check(e, window_size, treshold/2, doubles_score)
-                     if len(h) > 0:
+               for f in Decoding64Iter6(e):
+                  if len(f) > 0:
+                     if print_all:
                         with lock:
-                           output_file.write(h)
+                           output_file.write(f)
                            output_file.write("\n\n")
-                           #print("Potential text detected:", h)
+                           prn.up()
+                           continue
+                     f = readable_substrings(f,window_size)
+                     g = check(f, window_size, treshold, entropy_score)
+                     if len(g) > 0:
+                        h = check(g, window_size, treshold, character_distribution_score)
+                        if len(h) > 0:
+                           i = check(h, window_size, treshold/2, doubles_score)
+                           if len(i) > 0:
+                              with lock:
+                                 output_file.write(i)
+                                 output_file.write("\n\n")
+                                 prn.up()
+                                 #print("Potential text detected:", i)
       
       with ThreadPoolExecutor(max_workers=max_workers) as executor:
          #for a in BlockIter1(image):
          for b in OrderIter2(np.array(image)):
             for c in ColorIter3(b):
                for d in BitsIter4(c):
-                  prn.call("iteration: ")
+                  prn.call("iteration: ",", found: ")
                   executor.submit(process_d, d)
       
     print("Bruteforce finished")
+    prn.call("after "," iterations and has found "," potential strings.")
 
 class BlockIter1:
   def __init__(self,image):
@@ -203,12 +213,62 @@ class DecodingIter5:
       else:
          raise StopIteration
 
+class Decoding64Iter6:
+   def __init__(self,string):
+      self.str = string
+      self.mismatch = len(self.str) % 4
+      self.i = -1
+   def __iter__(self):
+      return self
+   def __next__(self):
+      
+      if self.i <= self.mismatch:
+
+         sliced_str = ""
+
+         if self.i == -1:
+            self.i += 1
+            return self.str #unchanged
+         elif self.i < self.mismatch:
+            sliced_str = self.str[self.i: -(self.mismatch - self.i)]
+         else:
+            sliced_str = self.str[self.mismatch:]
+
+         self.i += 1
+
+         res = ""
+         for i in range(0,len(sliced_str),4):
+            window = sliced_str[i:i+4]
+            try:
+                  decoded_bytes = base64.b64decode(window, validate=True)
+                  decoded_text = decoded_bytes.decode('ascii')
+                  res += decoded_text
+            except (base64.binascii.Error, UnicodeDecodeError):
+                  continue
+
+         return res
+      else:
+         raise StopIteration
+
 class printer():
    called = 0
+   hidden = 0
+   silent = False
+
+   def __init__(self,silent=False):
+      self.silent = silent
    
-   def call(self,first):
-      print(first + str(self.called))
+   def call(self,first = "",second = " ",third = ""):
       self.called += 1
+      if not self.silent:
+         print(first + str(self.called) + second + str(self.hidden) + third)
+   
+   def up(self):
+      self.hidden += 1
+
+def decode_base64(text):
+    
+    return res
 
 def readable_substrings(text,window_size):
    all = [""]
@@ -281,5 +341,5 @@ if __name__ == "__main__":
     #run('../stego/LSB w BMP/test.png',20,0.3) #not possible
     #run('../stego/LSB w JPG/plik.png',20,0.2) #not possible
     #run('../stego/LSB w JPG/cat.jpg',20,0.3)
-    run("../stego/LSB w BMP/IMG_enc.png",20,0.2)
+    run("../stego/LSB w BMP/IMG_enc.png",20,0.4)
     pass
