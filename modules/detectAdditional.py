@@ -46,6 +46,32 @@ def check_trailing_data(image_path):
         return False
 
 
+def scan_image(image_path):
+    if image_path.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+        full_path = image_path
+        filename = os.path.basename(image_path)
+    else:
+        print(f"Unsupported file format: {image_path}")
+        return {}
+    
+    results = {}
+    exif_detected = check_exif_data(full_path)
+    trailing_detected = check_trailing_data(full_path)
+
+    if exif_detected or trailing_detected:
+        results[filename] = {
+            'EXIF': exif_detected,
+            'Trailing_data': trailing_detected
+        }
+    else:
+        results[filename] = {
+            'EXIF': None,
+            'Trailing_data': None
+        }
+
+    print(results)
+    return results
+
 def scan_images(directory):
     """Scans a directory and checks images for extra data"""
     results = {}
@@ -72,29 +98,29 @@ def scan_images(directory):
     return results
 
 
-if __name__ == "__main__":
-    directories = {
-        "Folder 1": "../stego/nadmiarowe dane",
-        "Folder 2": "../normal",
-        "Folder 3": "../stego/nadmiarowe dane/jpegx",
-        "Folder 4": "../stego/nadmiarowe dane/steganography"
-    }
+#if __name__ == "__main__":
+   # directories = {
+   #     "Folder 1": "../stego/nadmiarowe dane",
+   #     "Folder 2": "../normal",
+   #     "Folder 3": "../stego/nadmiarowe dane/jpegx",
+   #     "Folder 4": "../stego/nadmiarowe dane/steganography"
+   # }
 
-    for folder_name, folder_path in directories.items():
-        if not os.path.isdir(folder_path):
-            print(f"The specified directory '{folder_name}' does not exist!")
-            continue
+    #for folder_name, folder_path in directories.items():
+    #    if not os.path.isdir(folder_path):
+    #        print(f"The specified directory '{folder_name}' does not exist!")
+    #        continue
+    #
+    #    print(f"\nScanning {folder_name}...")
+    #    results = scan_images(folder_path)
+    #    print(results)
 
-        print(f"\nScanning {folder_name}...")
-        results = scan_images(folder_path)
-        print(results)
-
-        if results:
-            print("\nImages checked:")
-            for filename, data in results.items():
-                print(f"\nFile: {filename}")
-                print(f"EXIF Data: {'Yes' if data['EXIF'] else 'No'}")
-                if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
-                    print(f"Trailing Data: {'Yes' if data['Trailing_data'] else 'No'}")
-        else:
-            print("\nNo extra data detected in images.")
+    #    if results:
+    #        print("\nImages checked:")
+    #        for filename, data in results.items():
+    #            print(f"\nFile: {filename}")
+    #            print(f"EXIF Data: {'Yes' if data['EXIF'] else 'No'}")
+    #            if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+    #                print(f"Trailing Data: {'Yes' if data['Trailing_data'] else 'No'}")
+    #    else:
+    #        print("\nNo extra data detected in images.")

@@ -18,7 +18,7 @@ def run(filename,treshold):
 
                     if score1 > treshold and score2 > treshold:
                         print("Potential text detected:",e,"scores:",score1,score2)
-    print("bruteforce finished")
+    print("bruteforce finished. Output in  output.txt")
 
 class BlockIter1:
   def __init__(self,image):
