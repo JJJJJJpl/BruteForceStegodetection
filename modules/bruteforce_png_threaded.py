@@ -1,9 +1,9 @@
-from functools import reduce
+#from functools import reduce
 from itertools import permutations
 from PIL import Image
 import numpy as np
 from collections import Counter
-import string
+#import string
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import base64
