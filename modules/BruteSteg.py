@@ -1,7 +1,7 @@
 import argparse
 from detectAdditional import scan_image as run_additional
 from detectStatistical import analyze_image as run_statistical
-from bruteforce import run as run_brute
+from bruteforce_png_threaded import run as run_brute
 
 def main():
     parser = argparse.ArgumentParser(
@@ -27,7 +27,28 @@ def main():
     )
     check_parser.add_argument(
         "-b", "--brute", action="store_true",
-        help="Uruchamia próbę wykrycia steganografii metodą brute force i odczytanie wiadomości"
+        help="Uruchamia próbę odczytania steganograficznie ukrytych danych. Dodaje flagi: w,dt,mw,v,all"
+    )
+
+    check_parser.add_argument(
+        "-w", "--window", type=int,
+        help="Określa szerokość okna dla funkcji wykrywającej tekst. Wymaga -b. Domyślnie 20."
+    )
+    check_parser.add_argument(
+        "-dt", "--treshold", type=float,
+        help="Określa czułość dla funkcji wykrywającej tekst. Wymaga -b. Domyślnie 0.3."
+    )
+    check_parser.add_argument(
+        "-mw", "--max_workers", type=int,
+        help="Okresla ilość wątków które użyje bruteforce. Wymaga -b. Domyślnie 4."
+    )
+    check_parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Bruteforce będzie wypisywał postępy podczas pracy."
+    )
+    check_parser.add_argument(
+        "-all", "--print_all", action="store_true",
+        help="Bruteforce nie będzie używał funkcji wykrywającej tekst, tylko zwróci wszystkie kombinacje. Dział identycznie co -dt 0.0."
     )
 
     args = parser.parse_args()
@@ -44,8 +65,45 @@ def main():
             run_statistical(args.image_path)
 
         if args.brute:
+            window = 20
+            treshold = 0.3
+
+            all = args.print_all
+            if all:
+                if args.window is not None: print("Uwaga: Ignoruję -w przez -all")
+                if args.treshold is not None: print("Uwaga: Ignoruję -dt przez -all")
+            else:
+                
+                if args.window is not None:
+                    if args.window <= 1:
+                        print("Uwaga: Ignoruję -w ponieważ musi być > 1")
+                    else:
+                        window = args.window
+                
+                if args.treshold is not None:
+                    if args.treshold < 0.0 or args.treshold > 1.0:
+                        print("Uwaga: Ignoruję -dt ponieważ musi być w zakresie (0.0, 1.0)")
+                    else:
+                        treshold = args.treshold
+            
+            max_workers = 4
+            if args.max_workers is not None:
+                if args.max_workers < 1:
+                    print("Uwaga: Ignoruję -mw ponieważ musi być > 0")
+                else:
+                    max_workers = args.max_workers
+            
+            silent = True
+            if args.verbose: silent = False
+
             print("Uruchamiam BruteForce...")
-            run_brute(args.image_path, 2)
+            run_brute(args.image_path,window,treshold,max_workers,silent,all)
+        else:
+            if args.window is not None: print("Uwaga: Ignoruję -w przez brak -b")
+            if args.treshold is not None: print("Uwaga: Ignoruję -dt przez brak -b")
+            if args.max_workers is not None: print("Uwaga: Ignoruję -mw przez brak -b")
+            if args.verbose: print("Uwaga: Ignoruję -v przez brak -b")
+            if args.print_all: print("Uwaga: Ignoruję -all przez brak -b")
 
         if not any([args.additional, args.statistical, args.brute]):
             print("Nie wybrano żadnej metody analizy. Użyj -a, -s lub -b.")

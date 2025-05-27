@@ -8,13 +8,13 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 import base64
 
-def run(filename, window_size, treshold, max_workers=4,silent=False,print_all=False):
+def run(filename, window_size, treshold, max_workers=4,silent=True,print_all=False):
     image = Image.open(filename)
     if image.mode != 'RGBA':
       image = image.convert("RGB")
     lock = threading.Lock()
 
-    prn = printer()
+    prn = printer(silent)
     
     with open("output.txt", 'w') as output_file:
       def process_d(d):
@@ -39,18 +39,17 @@ def run(filename, window_size, treshold, max_workers=4,silent=False,print_all=Fa
                                  output_file.write(i)
                                  output_file.write("\n\n")
                                  prn.up()
-                                 #print("Potential text detected:", i)
       
       with ThreadPoolExecutor(max_workers=max_workers) as executor:
-         #for a in BlockIter1(image):
          for b in OrderIter2(np.array(image)):
             for c in ColorIter3(b):
                for d in BitsIter4(c):
-                  prn.call("iteration: ",", found: ")
+                  prn.call("iteracja: ",", znaleziono: ")
                   executor.submit(process_d, d)
       
-    print("Bruteforce finished")
-    prn.call("after "," iterations and has found "," potential strings.")
+    print("Bruteforce zakończony")
+    prn.call("po "," iteracjach znaleziono "," potencjalnych tekstów.")
+    print("Wyniki zapisane w output.txt")
 
 class BlockIter1:
   def __init__(self,image):
@@ -253,9 +252,9 @@ class Decoding64Iter6:
 class printer():
    called = 0
    hidden = 0
-   silent = False
+   silent = True
 
-   def __init__(self,silent=False):
+   def __init__(self,silent=True):
       self.silent = silent
    
    def call(self,first = "",second = " ",third = ""):
@@ -265,10 +264,6 @@ class printer():
    
    def up(self):
       self.hidden += 1
-
-def decode_base64(text):
-    
-    return res
 
 def readable_substrings(text,window_size):
    all = [""]
@@ -336,10 +331,12 @@ def doubles_score(text):
     return valid_pairs/ all_pairs if valid_pairs > 0 and all_pairs > 0 else 0.0
    
 if __name__ == "__main__":
-    #run("../normal/YaK5lgBy0sunsplash.png",50,0.2)
-    #run("../stego/LSB w BMP/YaK5Long.png",20,0.4)
+    #tests
+    #run("../normal/YaK5lgBy0sunsplash.png",50,0.2) #nothing
+    #run("../stego/LSB w BMP/YaK5Long.png",20,0.4) #OK
+    #run("../stego/LSB w BMP/YaK5Short.png",20,0.3) #OK
     #run('../stego/LSB w BMP/test.png',20,0.3) #not possible
     #run('../stego/LSB w JPG/plik.png',20,0.2) #not possible
-    #run('../stego/LSB w JPG/cat.jpg',20,0.3)
-    run("../stego/LSB w BMP/IMG_enc.png",20,0.4)
+    #run('../stego/LSB w JPG/cat.jpg',20,0.3) #not possible
+    #run("../stego/LSB w BMP/IMG_enc.png",20,0.4) #OK
     pass
