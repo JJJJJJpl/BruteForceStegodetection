@@ -1,16 +1,15 @@
 import os
 import cv2
-import numpy as np
-import json
-from matplotlib import pyplot as plt
-from scipy.stats import skew, kurtosis
-import numpy as np
-import shutil
-from scipy.stats import entropy
 from multiprocessing import Pool, cpu_count
-import multiprocessing
-from scipy.stats import chi2
-from numba import njit
+import numpy as np
+#import json
+#from matplotlib import pyplot as plt
+#from scipy.stats import skew, kurtosis
+#import shutil
+#from scipy.stats import entropy
+#import multiprocessing
+#from scipy.stats import chi2
+#from numba import njit
 
 
 def analyze_image(image_path):
@@ -799,12 +798,6 @@ class PngAnalyzer:
                 print(f"Wartość p poniżej progu ({threshold}). Nie dodano do wyników.")
 
         return results
-
-
-
-
-
-
 
 
 
